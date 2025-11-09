@@ -7,9 +7,12 @@ requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.17.1",
     "fastapi[standard]>=0.121.0",
+    "httpx>=0.28.1",
     "psycopg2>=2.9.11",
     "pydantic-settings>=2.11.0",
+    "pytest>=9.0.0",
     "python-dotenv>=1.2.1",
+    "trio>=0.32.0",
 ]
 
 [dependency-groups]
