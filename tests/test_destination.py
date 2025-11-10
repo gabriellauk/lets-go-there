@@ -1,20 +1,19 @@
+
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.main import app
 
+@pytest.mark.asyncio
+async def test_create_destination(client: AsyncClient, session: AsyncSession) -> None:
+    request_body = {
+        "name": "Alhambra",
+        "description": "Granada, Spain",
+        "imageId": "img_123",
+        "notes": "A beautiful palace",
+    }
 
-@pytest.mark.anyio
-async def test_create_destination() -> None:
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        request_body = {
-            "name": "Alhambra",
-            "description": "Granada, Spain",
-            "imageId": "img_123",
-            "notes": "A beautiful palace",
-        }
-
-        response = await ac.post("/destination/", json=request_body)
+    response = await client.post("/destination/", json=request_body)
 
     assert response.status_code == 200
     response_json = response.json()

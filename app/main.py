@@ -9,7 +9,7 @@ from app.database.init_db import create_tables
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    create_tables()
+    await create_tables()
     print("✅ Application started and database tables created!")
     yield
     print("🛑 Application shutting down!")

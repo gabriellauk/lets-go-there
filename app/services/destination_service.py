@@ -1,10 +1,10 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.destination import Destination
 from app.schemas.destination import DestinationCreate
 
 
-def create_new_destination(db: Session, request_data: DestinationCreate) -> Destination:
+async def create_new_destination(db: AsyncSession, request_data: DestinationCreate) -> Destination:
     destination = Destination(
         name=request_data.name,
         description=request_data.description,
@@ -12,6 +12,6 @@ def create_new_destination(db: Session, request_data: DestinationCreate) -> Dest
         image_id=request_data.image_id,
     )
     db.add(destination)
-    db.commit()
-    db.refresh(destination)
+    await db.commit()
+    await db.refresh(destination)
     return destination
