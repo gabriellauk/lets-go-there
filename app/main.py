@@ -4,15 +4,17 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.routes import destination as destination_router
-from app.database.init_db import create_tables
+from app.database.init_db import run_migrations
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    await create_tables()
-    print("✅ Application started and database tables created!")
+    print("Starting up...")
+    print("Run Alembic upgrade head...")
+    await run_migrations()
+    print("Migrations successful!")
     yield
-    print("🛑 Application shutting down!")
+    print("Application shutting down!")
 
 
 app = FastAPI(lifespan=lifespan)
