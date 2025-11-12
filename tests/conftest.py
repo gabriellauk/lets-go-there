@@ -24,20 +24,17 @@ async def override_get_db() -> AsyncGenerator[AsyncSession]:
         yield session
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
-async def initialise_test_database() -> AsyncGenerator[None]:
-    # Create tables once for the whole test session
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-    await engine.dispose()
-
-
 @pytest_asyncio.fixture(scope="function")
 async def db_session() -> AsyncGenerator[AsyncSession]:
     # Provide a clean session for each test
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     async with TestingSessionLocal() as session:
         yield session
+
+    await engine.dispose()
 
 
 @pytest_asyncio.fixture(scope="function")

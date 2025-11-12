@@ -15,3 +15,8 @@ async def create_new_destination(db: AsyncSession, request_data: DestinationCrea
     await db.commit()
     await db.refresh(destination)
     return destination
+
+
+async def get_destination_by_id(db: AsyncSession, destination_id: int) -> Destination | None:
+    result = await db.get(Destination, destination_id)
+    return result
