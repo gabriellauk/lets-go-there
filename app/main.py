@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.routes import destination as destination_router
+from app.api.routes import user as user_router
 from app.database.init_db import run_migrations
 
 
@@ -19,6 +20,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(destination_router.router)
+app.include_router(user_router.router)
 
 
 @app.get("/health")
