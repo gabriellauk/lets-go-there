@@ -4,19 +4,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
-
-
-async def _create_user_account(db_session: AsyncSession) -> models.UserAccount:
-    password_hash = "$argon2id$v=19$m=65536,t=3,p=4$wagCPXjifgvUFBzq4hqe3w$CYaIb8sB+wtD+Vu/P4uod1+Qof8h+1g7bbDlBID48Rc"
-    user_account = models.UserAccount(email="somebody@somewhere.com", password_hash=password_hash, name="Somebody")
-    db_session.add(user_account)
-    await db_session.commit()
-    return user_account
+from tests.factory import create_user_account
 
 
 @pytest.mark.asyncio
 async def test_login(client: AsyncClient, db_session: AsyncSession) -> None:
-    await _create_user_account(db_session)
+    await create_user_account(db_session)
 
     form_data = {
         "username": "somebody@somewhere.com",
@@ -35,7 +28,7 @@ async def test_login(client: AsyncClient, db_session: AsyncSession) -> None:
 
 @pytest.mark.asyncio
 async def test_login_fails_wrong_email(client: AsyncClient, db_session: AsyncSession) -> None:
-    await _create_user_account(db_session)
+    await create_user_account(db_session)
 
     form_data = {
         "username": "wrong@email.com",
@@ -52,7 +45,7 @@ async def test_login_fails_wrong_email(client: AsyncClient, db_session: AsyncSes
 
 @pytest.mark.asyncio
 async def test_login_fails_wrong_password(client: AsyncClient, db_session: AsyncSession) -> None:
-    user = await _create_user_account(db_session)
+    user = await create_user_account(db_session)
 
     form_data = {
         "username": user.email,
@@ -86,7 +79,7 @@ async def test_create_account(client: AsyncClient, db_session: AsyncSession) -> 
 
 @pytest.mark.asyncio
 async def test_create_account_fails_user_already_exists(client: AsyncClient, db_session: AsyncSession) -> None:
-    existing_user = await _create_user_account(db_session)
+    existing_user = await create_user_account(db_session)
 
     request_body = {"email": existing_user.email, "password": "mypassword", "name": "Some Name"}
 
