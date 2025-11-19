@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import session
 from app.core.config import settings
 from app.core.security import authenticate_user, create_access_token, get_password_hash
+from app.database.init_db import get_db
 from app.schemas.user import Token, UserCreate, UserRead
 from app.services.user_account import create_user_account, get_user_by_email
 
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/user", tags=["user"])
 
 @router.post("/token")
 async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: AsyncSession = session
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Annotated[AsyncSession, Depends(get_db)]
 ) -> Token:
     user = await authenticate_user(db, form_data.username, form_data.password)
     if not user:
@@ -31,7 +31,7 @@ async def login_for_access_token(
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserRead)
-async def create_user(user_create: UserCreate, db: AsyncSession = session) -> UserRead:
+async def create_user(user_create: UserCreate, db: Annotated[AsyncSession, Depends(get_db)]) -> UserRead:
     user = await get_user_by_email(db, user_create.email)
 
     if user:

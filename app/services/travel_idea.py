@@ -5,16 +5,14 @@ from app.models.user_account import UserAccount
 from app.schemas.travel_idea import TravelIdeaCreate
 
 
-async def create_new_travel_idea(db: AsyncSession, request_data: TravelIdeaCreate) -> TravelIdea:
-    #  TODO: Replace with actual user
-    password_hash = "$argon2id$v=19$m=65536,t=3,p=4$wagCPXjifgvUFBzq4hqe3w$CYaIb8sB+wtD+Vu/P4uod1+Qof8h+1g7bbDlBID48Rc"
-    user_account = UserAccount(email="somebody@somewhere.com", password_hash=password_hash, name="Somebody")
-
+async def create_new_travel_idea(
+    db: AsyncSession, request_data: TravelIdeaCreate, current_user: UserAccount
+) -> TravelIdea:
     travel_idea = TravelIdea(
         name=request_data.name,
         notes=request_data.notes,
         image_url=request_data.image_url,
-        created_by=user_account,
+        created_by=current_user,
     )
     db.add(travel_idea)
 

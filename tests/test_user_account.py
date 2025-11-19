@@ -4,13 +4,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
-from tests.factory import create_user_account
+from app.models.user_account import UserAccount
 
 
 @pytest.mark.asyncio
-async def test_login(client: AsyncClient, db_session: AsyncSession) -> None:
-    await create_user_account(db_session)
-
+async def test_login(client: AsyncClient, db_session: AsyncSession, user: UserAccount) -> None:
     form_data = {
         "username": "somebody@somewhere.com",
         "password": "secret",
@@ -27,9 +25,7 @@ async def test_login(client: AsyncClient, db_session: AsyncSession) -> None:
 
 
 @pytest.mark.asyncio
-async def test_login_fails_wrong_email(client: AsyncClient, db_session: AsyncSession) -> None:
-    await create_user_account(db_session)
-
+async def test_login_fails_wrong_email(client: AsyncClient, db_session: AsyncSession, user: UserAccount) -> None:
     form_data = {
         "username": "wrong@email.com",
         "password": "secret",
@@ -44,9 +40,7 @@ async def test_login_fails_wrong_email(client: AsyncClient, db_session: AsyncSes
 
 
 @pytest.mark.asyncio
-async def test_login_fails_wrong_password(client: AsyncClient, db_session: AsyncSession) -> None:
-    user = await create_user_account(db_session)
-
+async def test_login_fails_wrong_password(client: AsyncClient, db_session: AsyncSession, user: UserAccount) -> None:
     form_data = {
         "username": user.email,
         "password": "wrongpassword",
@@ -78,10 +72,10 @@ async def test_create_account(client: AsyncClient, db_session: AsyncSession) -> 
 
 
 @pytest.mark.asyncio
-async def test_create_account_fails_user_already_exists(client: AsyncClient, db_session: AsyncSession) -> None:
-    existing_user = await create_user_account(db_session)
-
-    request_body = {"email": existing_user.email, "password": "mypassword", "name": "Some Name"}
+async def test_create_account_fails_user_already_exists(
+    client: AsyncClient, db_session: AsyncSession, user: UserAccount
+) -> None:
+    request_body = {"email": user.email, "password": "mypassword", "name": "Some Name"}
 
     response = await client.post("/user/register", json=request_body)
 
