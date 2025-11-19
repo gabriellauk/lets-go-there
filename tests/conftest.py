@@ -6,12 +6,11 @@ from httpx import AsyncClient
 from httpx._transports.asgi import ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.api.dependencies import get_db
 from app.core.config import settings
 from app.core.security import create_access_token
-from app.database.init_db import Base
+from app.database.init_db import Base, get_db
 from app.main import app
-from app.models.user_account import UserAccount
+from app.models import TravelIdeaGroup, UserAccount
 
 # Async engine and sessionmaker using in-memory SQLite for tests
 engine = create_async_engine(
@@ -28,7 +27,7 @@ async def override_get_db() -> AsyncGenerator[AsyncSession]:
         yield session
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture
 async def db_session() -> AsyncGenerator[AsyncSession]:
     # Provide a clean session for each test
 
@@ -41,7 +40,7 @@ async def db_session() -> AsyncGenerator[AsyncSession]:
     await engine.dispose()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture
 async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient]:
     # Override dependency to use test session
     app.dependency_overrides[get_db] = override_get_db
@@ -54,7 +53,7 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient]:
     app.dependency_overrides.clear()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture
 async def user(db_session: AsyncSession) -> None:
     password_hash = "$argon2id$v=19$m=65536,t=3,p=4$wagCPXjifgvUFBzq4hqe3w$CYaIb8sB+wtD+Vu/P4uod1+Qof8h+1g7bbDlBID48Rc"
     user_account = UserAccount(email="somebody@somewhere.com", password_hash=password_hash, name="Somebody")
@@ -63,7 +62,7 @@ async def user(db_session: AsyncSession) -> None:
     return user_account
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture
 async def authenticated_client(db_session: AsyncSession, user: UserAccount) -> AsyncGenerator[AsyncClient]:
     # Override dependency to use test session
     app.dependency_overrides[get_db] = override_get_db
@@ -79,3 +78,12 @@ async def authenticated_client(db_session: AsyncSession, user: UserAccount) -> A
 
     # Remove the override after test completes
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def travel_idea_group(db_session: AsyncSession, user: UserAccount) -> TravelIdeaGroup:
+    travel_idea_group = TravelIdeaGroup(name="Our travel bucket list", owned_by=user)
+    db_session.add(travel_idea_group)
+    await db_session.commit()
+    await db_session.refresh(travel_idea_group)
+    return travel_idea_group

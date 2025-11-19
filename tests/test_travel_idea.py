@@ -4,10 +4,13 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
+from app.models import TravelIdeaGroup
 
 
 @pytest.mark.asyncio
-async def test_create_travel_idea(authenticated_client: AsyncClient, db_session: AsyncSession) -> None:
+async def test_create_travel_idea(
+    authenticated_client: AsyncClient, db_session: AsyncSession, travel_idea_group: TravelIdeaGroup
+) -> None:
     request_body = {
         "name": "Alhambra",
         "imageUrl": "img_123",
@@ -28,9 +31,18 @@ async def test_create_travel_idea(authenticated_client: AsyncClient, db_session:
 
 @pytest.mark.asyncio
 async def test_get_travel_idea(
-    authenticated_client: AsyncClient, db_session: AsyncSession, user: models.UserAccount
+    authenticated_client: AsyncClient,
+    db_session: AsyncSession,
+    user: models.UserAccount,
+    travel_idea_group: TravelIdeaGroup,
 ) -> None:
-    travel_idea = models.TravelIdea(name="Alhambra", image_url="img_123", notes="A beautiful palace", created_by=user)
+    travel_idea = models.TravelIdea(
+        name="Alhambra",
+        image_url="img_123",
+        notes="A beautiful palace",
+        created_by=user,
+        travel_idea_group=travel_idea_group,
+    )
     db_session.add(travel_idea)
     await db_session.commit()
 
