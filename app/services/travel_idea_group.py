@@ -4,11 +4,11 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import TravelIdeaGroup, UserAccount
 from app.models.travel_idea_group_member import TravelIdeaGroupMember
-from app.schemas.travel_idea_group import TravelIdeaGroupCreate
+from app.schemas.travel_idea_group import TravelIdeaGroupCreate, TravelIdeaGroupUpdate
 
 
 async def create_new_travel_idea_group(
-    db: AsyncSession, request_data: TravelIdeaGroupCreate, current_user: UserAccount, shared_with: list[UserAccount]
+    db: AsyncSession, request_data: TravelIdeaGroupCreate, current_user: UserAccount
 ) -> TravelIdeaGroup:
     travel_idea_group = TravelIdeaGroup(
         name=request_data.name,
@@ -45,6 +45,14 @@ async def get_travel_idea_groups(db: AsyncSession, user_account_id: int) -> list
     )
     travel_idea_groups = result.scalars().all()
     return travel_idea_groups
+
+
+async def update_existing_travel_idea_group(
+    db: AsyncSession, request_data: TravelIdeaGroupUpdate, travel_idea_group: TravelIdeaGroup
+) -> TravelIdeaGroup:
+    travel_idea_group.name = request_data.name
+    await db.commit()
+    return travel_idea_group
 
 
 async def delete_travel_idea_group_and_members(db: AsyncSession, travel_idea_group: TravelIdeaGroup) -> None:

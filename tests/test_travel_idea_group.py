@@ -2,6 +2,7 @@ from typing import Literal
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
@@ -45,7 +46,38 @@ async def _create_travel_idea_group(
 
 
 @pytest.mark.asyncio
-async def test_get_travel_idea_group_doesnt_exist(authenticated_client: AsyncClient) -> None:
+async def test_create_travel_idea_group_fails_mandatory_field_missing(authenticated_client: AsyncClient) -> None:
+    response = await authenticated_client.post("/travel-idea-group/")
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_create_travel_idea_group(
+    db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
+) -> None:
+    response = await authenticated_client.post("/travel-idea-group/", json={"name": "Our travel bucket list"})
+
+    assert response.status_code == 201
+
+    response_json = response.json()
+    assert response_json.pop("id") is not None
+
+    assert response_json == {
+        "name": "Our travel bucket list",
+        "ownedBy": {"email": user.email, "name": user.name},
+        "sharedWith": [],
+    }
+
+    result = await db_session.execute(select(TravelIdeaGroup))
+    travel_idea_group = result.scalars().all()
+
+    assert len(travel_idea_group) == 1
+    assert travel_idea_group[0].name == "Our travel bucket list"
+
+
+@pytest.mark.asyncio
+async def test_get_travel_idea_group_fails_doesnt_exist(authenticated_client: AsyncClient) -> None:
     response = await authenticated_client.get("/travel-idea-group/4")
 
     assert response.status_code == 404
@@ -53,7 +85,7 @@ async def test_get_travel_idea_group_doesnt_exist(authenticated_client: AsyncCli
 
 
 @pytest.mark.asyncio
-async def test_get_travel_idea_group_no_access(
+async def test_get_travel_idea_group_fails_no_access(
     authenticated_client: AsyncClient,
     db_session: AsyncSession,
     user: models.UserAccount,
@@ -141,6 +173,57 @@ async def test_get_travel_idea_groups(
             ],
         },
     ]
+
+
+@pytest.mark.asyncio
+async def test_update_travel_idea_group_fails_mandatory_field_missing(
+    db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
+) -> None:
+    travel_idea_group, _, _ = await _create_travel_idea_group(db_session, user, current_user_role="owner")
+
+    response = await authenticated_client.put(f"/travel-idea-group/{travel_idea_group.id}")
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_update_travel_idea_group_fails_not_owner(
+    db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
+) -> None:
+    travel_idea_group, _, _ = await _create_travel_idea_group(db_session, user, current_user_role="member")
+
+    response = await authenticated_client.put(f"/travel-idea-group/{travel_idea_group.id}", json={"name": "A new name"})
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Not authorised to perform this action"
+
+
+@pytest.mark.asyncio
+async def test_update_travel_idea_group(
+    db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
+) -> None:
+    travel_idea_group, members, _ = await _create_travel_idea_group(db_session, user, current_user_role="owner")
+    travel_idea_group_id = travel_idea_group.id
+
+    response = await authenticated_client.put(f"/travel-idea-group/{travel_idea_group.id}", json={"name": "A new name"})
+
+    assert response.status_code == 200
+
+    response_json = response.json()
+    assert response_json.pop("id") is not None
+
+    assert response_json == {
+        "name": "A new name",
+        "ownedBy": {"email": user.email, "name": user.name},
+        "sharedWith": [
+            {"email": members[0].email, "name": members[0].name},
+            {"email": members[1].email, "name": members[1].name},
+        ],
+    }
+
+    db_session.expire_all()
+    updated_db_object = await db_session.get(TravelIdeaGroup, travel_idea_group_id)
+    assert updated_db_object.name == "A new name"
 
 
 @pytest.mark.asyncio

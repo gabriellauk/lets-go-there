@@ -1,5 +1,3 @@
-from pydantic import EmailStr
-
 from app.models.travel_idea_group import TravelIdeaGroup
 from app.models.user_account import UserAccount
 from app.schemas.shared import BaseSchema
@@ -15,12 +13,11 @@ class TravelIdeaGroupBase(BaseSchema):
 
 
 class TravelIdeaGroupCreate(TravelIdeaGroupBase):
-    shared_with: list[EmailStr] | None
+    pass
 
 
 class TravelIdeaGroupUpdate(TravelIdeaGroupBase):
     name: str | None
-    shared_with: list[EmailStr] | None
 
 
 class TravelIdeaGroupRead(TravelIdeaGroupBase):
@@ -30,7 +27,8 @@ class TravelIdeaGroupRead(TravelIdeaGroupBase):
 
 
 def construct_travel_idea_group(
-    travel_idea_group: TravelIdeaGroup, members_user_accounts: list[UserAccount] | None = None
+    travel_idea_group: TravelIdeaGroup,
+    members_user_accounts: list[UserAccount] | None = None,
 ) -> TravelIdeaGroupRead:
     if members_user_accounts is None:
         members_user_accounts = [member.user_account for member in travel_idea_group.members]
