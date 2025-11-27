@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 import pytest
@@ -7,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
 from app.models.travel_idea_group import TravelIdeaGroup
+from app.models.travel_idea_group_invitation import TravelIdeaGroupInvitation
+from app.schemas.travel_idea_group import TravelIdeaGroupInvitationStatus
 from tests.factory import create_user_accounts
 
 
@@ -74,6 +77,70 @@ async def test_create_travel_idea_group(
 
     assert len(travel_idea_group) == 1
     assert travel_idea_group[0].name == "Our travel bucket list"
+
+
+@pytest.mark.asyncio
+async def test_create_travel_idea_group_invitation_fails_not_found(
+    authenticated_client: AsyncClient, user: models.UserAccount
+) -> None:
+    response = await authenticated_client.post("/travel-idea-group/3/invitation", json={"email": "name@website.com"})
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Travel idea group not found"
+
+
+@pytest.mark.asyncio
+async def test_create_travel_idea_group_invitation_fails_not_owner(
+    db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
+) -> None:
+    travel_idea_group, _, _ = await _create_travel_idea_group(db_session, user, current_user_role="member")
+
+    response = await authenticated_client.post(
+        f"/travel-idea-group/{travel_idea_group.id}/invitation", json={"email": "name@website.com"}
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Not authorised to perform this action"
+
+
+@pytest.mark.asyncio
+async def test_create_travel_idea_group_invitation_fails_invalid_email(
+    db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
+) -> None:
+    travel_idea_group, _, _ = await _create_travel_idea_group(db_session, user, current_user_role="owner")
+
+    response = await authenticated_client.post(
+        f"/travel-idea-group/{travel_idea_group.id}/invitation", json={"email": "namewebsite.com"}
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_create_travel_idea_group_invitation(
+    db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
+) -> None:
+    travel_idea_group, _, _ = await _create_travel_idea_group(db_session, user, current_user_role="owner")
+
+    email = "name@website.com"
+    response = await authenticated_client.post(
+        f"/travel-idea-group/{travel_idea_group.id}/invitation", json={"email": email}
+    )
+
+    assert response.status_code == 201
+
+    result = await db_session.execute(select(TravelIdeaGroupInvitation))
+    invitations = result.scalars().all()
+    assert len(invitations) == 1
+
+    invitation = invitations[0]
+    assert invitation.email == email
+    assert len(invitation.invitation_code) == 10
+    assert invitation.status == TravelIdeaGroupInvitationStatus.PENDING
+    assert invitation.created_at.date() == datetime.now(UTC).date()
+    assert invitation.expires_at.date() == datetime.now(UTC).date() + timedelta(weeks=2)
+    assert invitation.created_by == user
+    assert invitation.travel_idea_group == travel_idea_group
 
 
 @pytest.mark.asyncio

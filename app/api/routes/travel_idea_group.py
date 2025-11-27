@@ -9,12 +9,14 @@ from app.models.travel_idea_group import TravelIdeaGroup
 from app.models.user_account import UserAccount
 from app.schemas.travel_idea_group import (
     TravelIdeaGroupCreate,
+    TravelIdeaGroupInvitationCreateOrDelete,
     TravelIdeaGroupRead,
     TravelIdeaGroupUpdate,
     construct_travel_idea_group,
 )
 from app.services.travel_idea_group import (
     create_new_travel_idea_group,
+    create_new_travel_idea_group_invitation,
     delete_travel_idea_group_and_members,
     get_travel_idea_group_by_id,
     get_travel_idea_groups,
@@ -33,6 +35,22 @@ async def create_travel_idea_group(
     travel_idea_group = await create_new_travel_idea_group(db, request_body, current_user)
 
     return construct_travel_idea_group(travel_idea_group, [])
+
+
+@router.post("/{travel_idea_group_id}/invitation", status_code=status.HTTP_201_CREATED)
+async def create_travel_idea_group_invitation(
+    travel_idea_group_id: int,
+    body: TravelIdeaGroupInvitationCreateOrDelete,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[UserAccount, Depends(get_current_user)],
+) -> None:
+    travel_idea_group = await _validate_existence_and_ownership_of_travel_idea_group(
+        db, travel_idea_group_id, current_user
+    )
+
+    await create_new_travel_idea_group_invitation(db, current_user, travel_idea_group, body.email)
+
+    return 201
 
 
 @router.get("/", response_model=list[TravelIdeaGroupRead])
