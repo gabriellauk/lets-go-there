@@ -3,7 +3,9 @@ import string
 from datetime import UTC, datetime, timedelta
 
 from pydantic import EmailStr
+from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from app.models import TravelIdeaGroup, UserAccount
 from app.models.travel_idea_group_invitation import TravelIdeaGroupInvitation
@@ -26,3 +28,25 @@ async def create_new_travel_idea_group_invitation(
     db.add(invitation)
     await db.commit()
     return invitation
+
+
+def select_travel_idea_group_invitation(db: AsyncSession) -> Select:
+    return select(TravelIdeaGroupInvitation).options(
+        joinedload(TravelIdeaGroupInvitation.created_by),
+        joinedload(TravelIdeaGroupInvitation.travel_idea_group),
+    )
+
+
+async def get_travel_idea_group_invitations(db: AsyncSession, email: str) -> list[TravelIdeaGroup]:
+    result = await db.execute(
+        (
+            select_travel_idea_group_invitation(db).where(
+                TravelIdeaGroupInvitation.email == email,
+                TravelIdeaGroupInvitation.status == TravelIdeaGroupInvitationStatus.PENDING,
+                TravelIdeaGroupInvitation.expires_at >= datetime.now(UTC),
+            )
+        ).order_by(TravelIdeaGroupInvitation.created_at)
+    )
+
+    travel_idea_group_invitations = result.scalars().all()
+    return travel_idea_group_invitations

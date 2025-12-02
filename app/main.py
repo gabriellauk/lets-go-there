@@ -10,6 +10,9 @@ from app.api.routes import (
     travel_idea_group as travel_idea_group_router,
 )
 from app.api.routes import (
+    travel_idea_group_invitation as travel_idea_group_invitation_router,
+)
+from app.api.routes import (
     user as user_router,
 )
 from app.database.init_db import run_migrations
@@ -29,6 +32,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(travel_idea_router.router)
 app.include_router(user_router.router)
 app.include_router(travel_idea_group_router.router)
+app.include_router(travel_idea_group_invitation_router.router)
 
 
 @app.get("/health")

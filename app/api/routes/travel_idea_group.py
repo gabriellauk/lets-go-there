@@ -48,6 +48,12 @@ async def create_travel_idea_group_invitation(
         db, travel_idea_group_id, current_user
     )
 
+    owner = travel_idea_group.owned_by
+    members_user_accounts = [member.user_account for member in travel_idea_group.members]
+
+    if body.email == owner.email or body.email in [user.email for user in members_user_accounts]:
+        raise HTTPException(status_code=400, detail="User can already access this travel idea group")
+
     await create_new_travel_idea_group_invitation(db, current_user, travel_idea_group, body.email)
 
     return 201

@@ -117,6 +117,36 @@ async def test_create_travel_idea_group_invitation_fails_invalid_email(
 
 
 @pytest.mark.asyncio
+async def test_create_travel_idea_group_invitation_fails_invitee_already_a_member(
+    db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
+) -> None:
+    travel_idea_group, members, _ = await _create_travel_idea_group(db_session, user, current_user_role="owner")
+
+    email = members[0].email
+    response = await authenticated_client.post(
+        f"/travel-idea-group/{travel_idea_group.id}/invitation", json={"email": email}
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "User can already access this travel idea group"
+
+
+@pytest.mark.asyncio
+async def test_create_travel_idea_group_invitation_fails_invitee_is_the_owner(
+    db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
+) -> None:
+    travel_idea_group, _, owner = await _create_travel_idea_group(db_session, user, current_user_role="owner")
+
+    email = owner.email
+    response = await authenticated_client.post(
+        f"/travel-idea-group/{travel_idea_group.id}/invitation", json={"email": email}
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "User can already access this travel idea group"
+
+
+@pytest.mark.asyncio
 async def test_create_travel_idea_group_invitation(
     db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
 ) -> None:
