@@ -1,16 +1,10 @@
-import random
-import string
-from datetime import UTC, datetime, timedelta
-
-from pydantic import EmailStr
 from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import TravelIdeaGroup, UserAccount
-from app.models.travel_idea_group_invitation import TravelIdeaGroupInvitation
 from app.models.travel_idea_group_member import TravelIdeaGroupMember
-from app.schemas.travel_idea_group import TravelIdeaGroupCreate, TravelIdeaGroupInvitationStatus, TravelIdeaGroupUpdate
+from app.schemas.travel_idea_group import TravelIdeaGroupCreate, TravelIdeaGroupUpdate
 
 
 async def create_new_travel_idea_group(
@@ -23,24 +17,6 @@ async def create_new_travel_idea_group(
     db.add(travel_idea_group)
     await db.commit()
     return travel_idea_group
-
-
-async def create_new_travel_idea_group_invitation(
-    db: AsyncSession, current_user: UserAccount, travel_idea_group: TravelIdeaGroup, email: EmailStr
-) -> TravelIdeaGroupInvitation:
-    invitation_code = "".join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(10))
-
-    invitation = TravelIdeaGroupInvitation(
-        email=email,
-        invitation_code=invitation_code,
-        status=TravelIdeaGroupInvitationStatus.PENDING,
-        expires_at=datetime.now(UTC) + timedelta(weeks=2),
-        created_by=current_user,
-        travel_idea_group=travel_idea_group,
-    )
-    db.add(invitation)
-    await db.commit()
-    return invitation
 
 
 def select_travel_idea_group(db: AsyncSession) -> Select:

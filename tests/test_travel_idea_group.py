@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import models
 from app.models.travel_idea_group import TravelIdeaGroup
 from app.models.travel_idea_group_invitation import TravelIdeaGroupInvitation
-from app.schemas.travel_idea_group import TravelIdeaGroupInvitationStatus
+from app.schemas.travel_idea_group_invitation import TravelIdeaGroupInvitationStatus
 from tests.factory import create_user_accounts
 
 

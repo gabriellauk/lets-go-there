@@ -1,7 +1,3 @@
-from enum import Enum
-
-from pydantic import EmailStr
-
 from app.models.travel_idea_group import TravelIdeaGroup
 from app.models.user_account import UserAccount
 from app.schemas.shared import BaseSchema
@@ -28,16 +24,6 @@ class TravelIdeaGroupRead(TravelIdeaGroupBase):
     id: int
     owned_by: TravelIdeaGroupUser
     shared_with: list[TravelIdeaGroupUser]
-
-
-class TravelIdeaGroupInvitationCreateOrDelete(BaseSchema):
-    email: EmailStr
-
-
-class TravelIdeaGroupInvitationStatus(Enum):
-    PENDING = "pending"
-    REJECTED = "rejected"
-    ACCEPTED = "accepted"
 
 
 def construct_travel_idea_group(
