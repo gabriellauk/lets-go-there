@@ -21,7 +21,11 @@ from app.services.travel_idea_group import (
     get_travel_idea_groups,
     update_existing_travel_idea_group,
 )
-from app.services.travel_idea_group_invitation import create_new_travel_idea_group_invitation
+from app.services.travel_idea_group_invitation import (
+    create_new_travel_idea_group_invitation,
+    delete_travel_idea_group_invitation,
+    get_travel_idea_group_invitation,
+)
 
 router = APIRouter(prefix="/travel-idea-group", tags=["travel-idea-group"])
 
@@ -114,3 +118,20 @@ async def delete_travel_idea_group(
     )
 
     await delete_travel_idea_group_and_members(db, travel_idea_group)
+
+
+@router.delete("/{travel_idea_group_id}/invitation", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_travel_idea_group_invitation(
+    travel_idea_group_id: int,
+    body: TravelIdeaGroupInvitationCreateOrDelete,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[UserAccount, Depends(get_current_user)],
+) -> None:
+    await validate_existence_and_ownership_of_travel_idea_group(db, travel_idea_group_id, current_user)
+
+    invitation = await get_travel_idea_group_invitation(db, travel_idea_group_id, body.email)
+    if not invitation:
+        raise HTTPException(status_code=404, detail="Valid invitation not found")
+
+    await delete_travel_idea_group_invitation(db, invitation)
+    return 204

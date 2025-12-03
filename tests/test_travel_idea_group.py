@@ -10,7 +10,7 @@ from app import models
 from app.models.travel_idea_group import TravelIdeaGroup
 from app.models.travel_idea_group_invitation import TravelIdeaGroupInvitation
 from app.schemas.travel_idea_group_invitation import TravelIdeaGroupInvitationStatus
-from tests.factory import create_user_accounts
+from tests.factory import create_travel_idea_group_invitation, create_user_accounts
 
 
 async def _create_travel_idea_group(
@@ -352,4 +352,149 @@ async def test_delete_travel_idea_group(
 
     db_session.expire_all()
     updated_db_object = await db_session.get(TravelIdeaGroup, travel_idea_group_id)
+    assert updated_db_object is None
+
+
+@pytest.mark.asyncio
+async def test_revoke_travel_idea_group_invitation_fails_doesnt_exist(authenticated_client: AsyncClient) -> None:
+    response = await authenticated_client.request(
+        "DELETE", "/travel-idea-group/404/invitation", json={"email": "somebody@company.com"}
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Travel idea group not found"
+
+
+@pytest.mark.asyncio
+async def test_revoke_travel_idea_group_invitation_fails_not_owner(
+    db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
+) -> None:
+    invitation, travel_idea_group, _ = await create_travel_idea_group_invitation(
+        db_session,
+        user.email,
+        TravelIdeaGroupInvitationStatus.PENDING,
+        name_prefix="pending",
+        expires_at=datetime.now(UTC) + timedelta(weeks=2),
+    )
+
+    response = await authenticated_client.request(
+        "DELETE", f"/travel-idea-group/{travel_idea_group.id}/invitation", json={"email": invitation.email}
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Not authorised to perform this action"
+
+
+@pytest.mark.asyncio
+async def test_revoke_travel_idea_group_invitation_fails_invalid_email(
+    db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
+) -> None:
+    travel_idea_group, _, _ = await _create_travel_idea_group(db_session, user, current_user_role="owner")
+
+    response = await authenticated_client.request(
+        "DELETE", f"/travel-idea-group/{travel_idea_group.id}/invitation", json={"email": "namewebsite.com"}
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_revoke_travel_idea_group_invitation_fails_email_and_travel_group_id_dont_match(
+    db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
+) -> None:
+    # Matches on travel idea group ID but not email
+    _, travel_idea_group, _ = await create_travel_idea_group_invitation(
+        db_session,
+        "email_doesnt_match@website.com",
+        TravelIdeaGroupInvitationStatus.PENDING,
+        name_prefix="email_doesnt_match",
+        expires_at=datetime.now(UTC) + timedelta(weeks=2),
+        creator=user,
+    )
+
+    # Matches on email but not travel idea group ID
+    invitation, _, _ = await create_travel_idea_group_invitation(
+        db_session,
+        "email_matches@website.com",
+        TravelIdeaGroupInvitationStatus.PENDING,
+        name_prefix="email_matches",
+        expires_at=datetime.now(UTC) + timedelta(weeks=2),
+        creator=user,
+    )
+
+    response = await authenticated_client.request(
+        "DELETE", f"/travel-idea-group/{travel_idea_group.id}/invitation", json={"email": invitation.email}
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Valid invitation not found"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [TravelIdeaGroupInvitationStatus.ACCEPTED, TravelIdeaGroupInvitationStatus.REJECTED])
+async def test_revoke_travel_idea_group_invitation_fails_not_pending(
+    db_session: AsyncSession,
+    authenticated_client: AsyncClient,
+    user: models.UserAccount,
+    status: TravelIdeaGroupInvitationStatus,
+) -> None:
+    invitation, travel_idea_group, _ = await create_travel_idea_group_invitation(
+        db_session,
+        "email_matches@website.com",
+        TravelIdeaGroupInvitationStatus.ACCEPTED,
+        name_prefix="email_matches",
+        expires_at=datetime.now(UTC) + timedelta(weeks=2),
+        creator=user,
+    )
+
+    response = await authenticated_client.request(
+        "DELETE", f"/travel-idea-group/{travel_idea_group.id}/invitation", json={"email": invitation.email}
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Valid invitation not found"
+
+
+@pytest.mark.asyncio
+async def test_revoke_travel_idea_group_invitation_fails_expired(
+    db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
+) -> None:
+    invitation, travel_idea_group, _ = await create_travel_idea_group_invitation(
+        db_session,
+        "email_matches@website.com",
+        TravelIdeaGroupInvitationStatus.PENDING,
+        name_prefix="email_matches",
+        expires_at=datetime.now(UTC) - timedelta(seconds=5),
+        creator=user,
+    )
+
+    response = await authenticated_client.request(
+        "DELETE", f"/travel-idea-group/{travel_idea_group.id}/invitation", json={"email": invitation.email}
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Valid invitation not found"
+
+
+@pytest.mark.asyncio
+async def test_revoke_travel_idea_group_invitation(
+    db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
+) -> None:
+    invitation, travel_idea_group, _ = await create_travel_idea_group_invitation(
+        db_session,
+        "email_matches@website.com",
+        TravelIdeaGroupInvitationStatus.PENDING,
+        name_prefix="email_matches",
+        expires_at=datetime.now(UTC) + timedelta(seconds=5),
+        creator=user,
+    )
+    invitation_id = invitation.id
+
+    response = await authenticated_client.request(
+        "DELETE", f"/travel-idea-group/{travel_idea_group.id}/invitation", json={"email": invitation.email}
+    )
+
+    assert response.status_code == 204
+    db_session.expire_all()
+    updated_db_object = await db_session.get(TravelIdeaGroupInvitation, invitation_id)
     assert updated_db_object is None

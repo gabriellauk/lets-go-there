@@ -37,6 +37,21 @@ def select_travel_idea_group_invitation(db: AsyncSession) -> Select:
     )
 
 
+async def get_travel_idea_group_invitation(
+    db: AsyncSession, travel_idea_group_id: int, email: str
+) -> TravelIdeaGroup | None:
+    result = await db.execute(
+        select_travel_idea_group_invitation(db).where(
+            TravelIdeaGroupInvitation.travel_idea_group_id == travel_idea_group_id,
+            TravelIdeaGroupInvitation.email == email,
+            TravelIdeaGroupInvitation.status == TravelIdeaGroupInvitationStatus.PENDING,
+            TravelIdeaGroupInvitation.expires_at >= datetime.now(UTC),
+        )
+    )
+    invitation = result.scalars().one_or_none()
+    return invitation
+
+
 async def get_travel_idea_group_invitations(db: AsyncSession, email: str) -> list[TravelIdeaGroup]:
     result = await db.execute(
         (
@@ -50,3 +65,8 @@ async def get_travel_idea_group_invitations(db: AsyncSession, email: str) -> lis
 
     travel_idea_group_invitations = result.scalars().all()
     return travel_idea_group_invitations
+
+
+async def delete_travel_idea_group_invitation(db: AsyncSession, invitation: TravelIdeaGroupInvitation) -> None:
+    await db.delete(invitation)
+    await db.commit()

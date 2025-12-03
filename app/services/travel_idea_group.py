@@ -28,7 +28,7 @@ def select_travel_idea_group(db: AsyncSession) -> Select:
 
 async def get_travel_idea_group_by_id(db: AsyncSession, travel_idea_group_id: int) -> TravelIdeaGroup | None:
     result = await db.execute(select_travel_idea_group(db).where(TravelIdeaGroup.id == travel_idea_group_id))
-    travel_idea_group = result.scalars().first()
+    travel_idea_group = result.scalars().one_or_none()
     return travel_idea_group
 
 
