@@ -3,7 +3,7 @@ import string
 from datetime import UTC, datetime, timedelta
 
 from pydantic import EmailStr
-from sqlalchemy import Select, select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -34,13 +34,25 @@ async def create_new_travel_idea_group_invitation(
 
 
 def select_travel_idea_group_invitation(
-    email: str, travel_idea_group_id: int | None = None, invitation_code: str | None = None
+    email: str | None = None,
+    travel_idea_group_id: int | None = None,
+    invitation_code: str | None = None,
+    include_rejected: bool = False,
 ) -> Select:
-    filters = [
-        TravelIdeaGroupInvitation.email == email,
-        TravelIdeaGroupInvitation.status == TravelIdeaGroupInvitationStatus.PENDING,
-        TravelIdeaGroupInvitation.expires_at >= datetime.now(UTC),
-    ]
+    filters = [TravelIdeaGroupInvitation.expires_at >= datetime.now(UTC)]
+
+    if include_rejected:
+        filters.append(
+            or_(
+                TravelIdeaGroupInvitation.status == TravelIdeaGroupInvitationStatus.PENDING,
+                TravelIdeaGroupInvitation.status == TravelIdeaGroupInvitationStatus.REJECTED,
+            )
+        )
+    else:
+        filters.append(TravelIdeaGroupInvitation.status == TravelIdeaGroupInvitationStatus.PENDING)
+
+    if email:
+        filters.append(TravelIdeaGroupInvitation.email == email)
 
     if travel_idea_group_id:
         filters.append(TravelIdeaGroupInvitation.travel_idea_group_id == travel_idea_group_id)
@@ -59,10 +71,20 @@ def select_travel_idea_group_invitation(
 
 async def get_travel_idea_group_invitation_for_travel_idea_group(
     db: AsyncSession, travel_idea_group_id: int, email: str
-) -> TravelIdeaGroup | None:
+) -> TravelIdeaGroupInvitation | None:
     result = await db.execute(select_travel_idea_group_invitation(email, travel_idea_group_id=travel_idea_group_id))
     invitation = result.scalars().one_or_none()
     return invitation
+
+
+async def get_outstanding_invitations_for_travel_idea_group(
+    db: AsyncSession, travel_idea_group_id: int
+) -> list[TravelIdeaGroupInvitation]:
+    result = await db.execute(
+        select_travel_idea_group_invitation(travel_idea_group_id=travel_idea_group_id, include_rejected=True)
+    )
+    invitations = result.scalars().all()
+    return invitations
 
 
 async def get_travel_idea_group_invitation_for_invitation_code(

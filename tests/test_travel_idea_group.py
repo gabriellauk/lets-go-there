@@ -218,6 +218,105 @@ async def test_get_travel_idea_group(
 
 
 @pytest.mark.asyncio
+async def test_get_travel_idea_group_invitations_fails_doesnt_exist(authenticated_client: AsyncClient) -> None:
+    response = await authenticated_client.get("/travel-idea-group/4/invitation")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Travel idea group not found"
+
+
+@pytest.mark.asyncio
+async def test_get_travel_idea_group_invitations_fails_not_owner(
+    authenticated_client: AsyncClient,
+    db_session: AsyncSession,
+    user: models.UserAccount,
+) -> None:
+    travel_idea_group, _, _ = await _create_travel_idea_group(db_session, user, current_user_role="member")
+
+    response = await authenticated_client.get(f"/travel-idea-group/{travel_idea_group.id}/invitation")
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Not authorised to perform this action"
+
+
+@pytest.mark.asyncio
+async def test_get_travel_idea_group_invitations(
+    authenticated_client: AsyncClient,
+    db_session: AsyncSession,
+    user: models.UserAccount,
+) -> None:
+    travel_idea_group, members, owner = await _create_travel_idea_group(db_session, user, current_user_role="owner")
+    other_travel_idea_group, _, _ = await _create_travel_idea_group(
+        db_session, user, current_user_role="owner", name_prefix="other"
+    )
+
+    accepted_invitation = models.TravelIdeaGroupInvitation(
+        email="accepted_invitation@email.com",
+        invitation_code="acccepted_invitation",
+        status=TravelIdeaGroupInvitationStatus.ACCEPTED,
+        expires_at=datetime.now(UTC) + timedelta(weeks=2),
+        created_by=user,
+        travel_idea_group=travel_idea_group,
+    )
+    rejected_invitation = models.TravelIdeaGroupInvitation(
+        email="rejected_invitation@email.com",
+        invitation_code="rejected_invitation",
+        status=TravelIdeaGroupInvitationStatus.REJECTED,
+        expires_at=datetime.now(UTC) + timedelta(weeks=2),
+        created_by=user,
+        travel_idea_group=travel_idea_group,
+    )
+    pending_invitation = models.TravelIdeaGroupInvitation(
+        email="pending_invitation@email.com",
+        invitation_code="pending_invitation",
+        status=TravelIdeaGroupInvitationStatus.PENDING,
+        expires_at=datetime.now(UTC) + timedelta(weeks=2),
+        created_by=user,
+        travel_idea_group=travel_idea_group,
+    )
+    pending_expiring_soon_invitation = models.TravelIdeaGroupInvitation(
+        email="pending_expiting_soon_invitation@email.com",
+        invitation_code="pending_expiring_soon_invitation",
+        status=TravelIdeaGroupInvitationStatus.PENDING,
+        expires_at=datetime.now(UTC) + timedelta(seconds=5),
+        created_by=user,
+        travel_idea_group=travel_idea_group,
+    )
+    pending_expired_invitation = models.TravelIdeaGroupInvitation(
+        email="pending_expired_invitation@email.com",
+        invitation_code="pending_expired_invitation",
+        status=TravelIdeaGroupInvitationStatus.PENDING,
+        expires_at=datetime.now(UTC) - timedelta(seconds=1),
+        created_by=user,
+        travel_idea_group=travel_idea_group,
+    )
+    pending_other_group_invitation = models.TravelIdeaGroupInvitation(
+        email="pending_other_group_invitation@email.com",
+        invitation_code="pending_other_group_invitation",
+        status=TravelIdeaGroupInvitationStatus.PENDING,
+        expires_at=datetime.now(UTC) + timedelta(weeks=2),
+        created_by=user,
+        travel_idea_group=other_travel_idea_group,
+    )
+    db_session.add_all(
+        [
+            accepted_invitation,
+            rejected_invitation,
+            pending_invitation,
+            pending_expiring_soon_invitation,
+            pending_expired_invitation,
+            pending_other_group_invitation,
+        ]
+    )
+    await db_session.commit()
+
+    response = await authenticated_client.get(f"/travel-idea-group/{travel_idea_group.id}/invitation")
+
+    assert response.status_code == 200
+    assert response.json() == [rejected_invitation.email, pending_invitation.email, pending_expiring_soon_invitation.email]
+
+
+@pytest.mark.asyncio
 async def test_get_travel_idea_groups_none_exist(authenticated_client: AsyncClient) -> None:
     response = await authenticated_client.get("/travel-idea-group/")
 

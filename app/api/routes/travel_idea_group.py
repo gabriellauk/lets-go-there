@@ -24,6 +24,7 @@ from app.services.travel_idea_group import (
 from app.services.travel_idea_group_invitation import (
     create_new_travel_idea_group_invitation,
     delete_travel_idea_group_invitation,
+    get_outstanding_invitations_for_travel_idea_group,
     get_travel_idea_group_invitation_for_travel_idea_group,
 )
 
@@ -89,6 +90,19 @@ async def get_travel_idea_group(
         raise HTTPException(status_code=403, detail="Not authorised to access this travel idea group")
 
     return construct_travel_idea_group(travel_idea_group, members_user_accounts)
+
+
+@router.get("/{travel_idea_group_id}/invitation", response_model=list[str])
+async def get_travel_idea_group_invitations(
+    travel_idea_group_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[UserAccount, Depends(get_current_user)],
+) -> TravelIdeaGroupRead:
+    await validate_existence_and_ownership_of_travel_idea_group(db, travel_idea_group_id, current_user)
+
+    invitations = await get_outstanding_invitations_for_travel_idea_group(db, travel_idea_group_id)
+
+    return [invitation.email for invitation in invitations]
 
 
 @router.put("/{travel_idea_group_id}", response_model=TravelIdeaGroupRead)
