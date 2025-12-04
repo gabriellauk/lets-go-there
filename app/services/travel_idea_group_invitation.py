@@ -9,7 +9,10 @@ from sqlalchemy.orm import joinedload
 
 from app.models import TravelIdeaGroup, UserAccount
 from app.models.travel_idea_group_invitation import TravelIdeaGroupInvitation
-from app.schemas.travel_idea_group_invitation import TravelIdeaGroupInvitationStatus
+from app.schemas.travel_idea_group_invitation import (
+    TravelIdeaGroupInvitationStatus,
+)
+from app.services.travel_idea_group_member import create_new_travel_idea_group_member
 
 
 async def create_new_travel_idea_group_invitation(
@@ -30,41 +33,67 @@ async def create_new_travel_idea_group_invitation(
     return invitation
 
 
-def select_travel_idea_group_invitation(db: AsyncSession) -> Select:
-    return select(TravelIdeaGroupInvitation).options(
-        joinedload(TravelIdeaGroupInvitation.created_by),
-        joinedload(TravelIdeaGroupInvitation.travel_idea_group),
+def select_travel_idea_group_invitation(
+    email: str, travel_idea_group_id: int | None = None, invitation_code: str | None = None
+) -> Select:
+    filters = [
+        TravelIdeaGroupInvitation.email == email,
+        TravelIdeaGroupInvitation.status == TravelIdeaGroupInvitationStatus.PENDING,
+        TravelIdeaGroupInvitation.expires_at >= datetime.now(UTC),
+    ]
+
+    if travel_idea_group_id:
+        filters.append(TravelIdeaGroupInvitation.travel_idea_group_id == travel_idea_group_id)
+
+    if invitation_code:
+        filters.append(TravelIdeaGroupInvitation.invitation_code == invitation_code)
+
+    return (
+        select(TravelIdeaGroupInvitation)
+        .options(
+            joinedload(TravelIdeaGroupInvitation.created_by), joinedload(TravelIdeaGroupInvitation.travel_idea_group)
+        )
+        .where(*filters)
     )
 
 
-async def get_travel_idea_group_invitation(
+async def get_travel_idea_group_invitation_for_travel_idea_group(
     db: AsyncSession, travel_idea_group_id: int, email: str
 ) -> TravelIdeaGroup | None:
-    result = await db.execute(
-        select_travel_idea_group_invitation(db).where(
-            TravelIdeaGroupInvitation.travel_idea_group_id == travel_idea_group_id,
-            TravelIdeaGroupInvitation.email == email,
-            TravelIdeaGroupInvitation.status == TravelIdeaGroupInvitationStatus.PENDING,
-            TravelIdeaGroupInvitation.expires_at >= datetime.now(UTC),
-        )
-    )
+    result = await db.execute(select_travel_idea_group_invitation(email, travel_idea_group_id=travel_idea_group_id))
+    invitation = result.scalars().one_or_none()
+    return invitation
+
+
+async def get_travel_idea_group_invitation_for_invitation_code(
+    db: AsyncSession, email: str, invitation_code: str
+) -> TravelIdeaGroup | None:
+    result = await db.execute(select_travel_idea_group_invitation(email, invitation_code=invitation_code))
     invitation = result.scalars().one_or_none()
     return invitation
 
 
 async def get_travel_idea_group_invitations(db: AsyncSession, email: str) -> list[TravelIdeaGroup]:
     result = await db.execute(
-        (
-            select_travel_idea_group_invitation(db).where(
-                TravelIdeaGroupInvitation.email == email,
-                TravelIdeaGroupInvitation.status == TravelIdeaGroupInvitationStatus.PENDING,
-                TravelIdeaGroupInvitation.expires_at >= datetime.now(UTC),
-            )
-        ).order_by(TravelIdeaGroupInvitation.created_at)
+        (select_travel_idea_group_invitation(email)).order_by(TravelIdeaGroupInvitation.created_at)
     )
 
     travel_idea_group_invitations = result.scalars().all()
     return travel_idea_group_invitations
+
+
+async def accept_or_reject_travel_idea_group_invitation(
+    db: AsyncSession,
+    invitation: TravelIdeaGroupInvitation,
+    user: UserAccount,
+    status: TravelIdeaGroupInvitationStatus,
+) -> TravelIdeaGroupInvitation:
+    invitation.status = status
+    if status == TravelIdeaGroupInvitationStatus.ACCEPTED:
+        await create_new_travel_idea_group_member(db, invitation.travel_idea_group, user)
+
+    await db.commit()
+    return invitation
 
 
 async def delete_travel_idea_group_invitation(db: AsyncSession, invitation: TravelIdeaGroupInvitation) -> None:
