@@ -3,10 +3,11 @@ from typing import Literal
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
+from app.models.travel_idea import TravelIdea
 from app.models.travel_idea_group import TravelIdeaGroup
 from app.models.travel_idea_group_invitation import TravelIdeaGroupInvitation
 from app.schemas.travel_idea_group_invitation import TravelIdeaGroupInvitationStatus
@@ -313,7 +314,11 @@ async def test_get_travel_idea_group_invitations(
     response = await authenticated_client.get(f"/travel-idea-group/{travel_idea_group.id}/invitation")
 
     assert response.status_code == 200
-    assert response.json() == [rejected_invitation.email, pending_invitation.email, pending_expiring_soon_invitation.email]
+    assert response.json() == [
+        rejected_invitation.email,
+        pending_invitation.email,
+        pending_expiring_soon_invitation.email,
+    ]
 
 
 @pytest.mark.asyncio
@@ -443,15 +448,43 @@ async def test_delete_travel_idea_group(
     user: models.UserAccount,
 ) -> None:
     travel_idea_group, _, _ = await _create_travel_idea_group(db_session, user, current_user_role="owner")
+
+    invitation = models.TravelIdeaGroupInvitation(
+        email="pending_invitation@email.com",
+        invitation_code="pending_invitation",
+        status=TravelIdeaGroupInvitationStatus.PENDING,
+        expires_at=datetime.now(UTC) + timedelta(weeks=2),
+        created_by=user,
+        travel_idea_group=travel_idea_group,
+    )
+
+    travel_idea = models.TravelIdea(
+        name="Alhambra",
+        image_url="img_123",
+        notes="A beautiful palace",
+        created_by=user,
+        travel_idea_group=travel_idea_group,
+    )
+    db_session.add_all([invitation, travel_idea])
+    await db_session.commit()
+
     travel_idea_group_id = travel_idea_group.id
+    invitation_id = invitation.id
+    travel_idea_id = travel_idea.id
 
     response = await authenticated_client.delete(f"/travel-idea-group/{travel_idea_group_id}")
 
     assert response.status_code == 204
 
     db_session.expire_all()
-    updated_db_object = await db_session.get(TravelIdeaGroup, travel_idea_group_id)
-    assert updated_db_object is None
+    updated_travel_idea_group = await db_session.get(TravelIdeaGroup, travel_idea_group_id)
+    assert updated_travel_idea_group is None
+    updated_invitation = await db_session.get(TravelIdeaGroupInvitation, invitation_id)
+    assert updated_invitation is None
+    updated_travel_idea = await db_session.get(TravelIdea, travel_idea_id)
+    assert updated_travel_idea is None
+    group_members = await db_session.execute(select(func.count()).select_from(models.TravelIdeaGroupMember))
+    assert group_members.scalar() == 0
 
 
 @pytest.mark.asyncio

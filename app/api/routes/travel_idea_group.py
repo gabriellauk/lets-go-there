@@ -16,7 +16,7 @@ from app.schemas.travel_idea_group import (
 from app.schemas.travel_idea_group_invitation import TravelIdeaGroupInvitationCreateOrDelete
 from app.services.travel_idea_group import (
     create_new_travel_idea_group,
-    delete_travel_idea_group_and_members,
+    delete_travel_idea_group_from_db,
     get_travel_idea_group_by_id,
     get_travel_idea_groups,
     update_existing_travel_idea_group,
@@ -131,7 +131,7 @@ async def delete_travel_idea_group(
         db, travel_idea_group_id, current_user
     )
 
-    await delete_travel_idea_group_and_members(db, travel_idea_group)
+    await delete_travel_idea_group_from_db(db, travel_idea_group)
 
 
 @router.delete("/{travel_idea_group_id}/invitation", status_code=status.HTTP_204_NO_CONTENT)

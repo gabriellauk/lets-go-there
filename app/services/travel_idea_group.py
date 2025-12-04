@@ -55,8 +55,6 @@ async def update_existing_travel_idea_group(
     return travel_idea_group
 
 
-async def delete_travel_idea_group_and_members(db: AsyncSession, travel_idea_group: TravelIdeaGroup) -> None:
-    for member in travel_idea_group.members:
-        await db.delete(member)
+async def delete_travel_idea_group_from_db(db: AsyncSession, travel_idea_group: TravelIdeaGroup) -> None:
     await db.delete(travel_idea_group)
     await db.commit()
