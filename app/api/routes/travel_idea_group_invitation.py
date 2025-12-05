@@ -1,13 +1,12 @@
-
 from fastapi import APIRouter, HTTPException
 
 from app.core.dependencies import CurrentUser
 from app.database.dependencies import DBSession
+from app.schemas.enums import TravelIdeaGroupInvitationStatus
 from app.schemas.travel_idea_group import TravelIdeaGroupUser
 from app.schemas.travel_idea_group_invitation import (
     TravelIdeaGroupInvitationRead,
     TravelIdeaGroupInvitationResponseRead,
-    TravelIdeaGroupInvitationStatus,
     TravelIdeaGroupInvitationUpdate,
 )
 from app.services.travel_idea_group_invitation import (

@@ -4,7 +4,7 @@ from sqlalchemy import DateTime, Enum, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.init_db import Base
-from app.schemas.travel_idea_group_invitation import TravelIdeaGroupInvitationStatus
+from app.schemas.enums import TravelIdeaGroupInvitationStatus
 
 from .travel_idea_group import TravelIdeaGroup
 from .user_account import UserAccount

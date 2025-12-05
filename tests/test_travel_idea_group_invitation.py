@@ -7,10 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app import models
-from app.schemas.travel_idea_group_invitation import (
-    TravelIdeaGroupInvitationResponseStatus,
-    TravelIdeaGroupInvitationStatus,
-)
+from app.schemas.enums import TravelIdeaGroupInvitationResponseStatus, TravelIdeaGroupInvitationStatus
 from tests.factory import create_travel_idea_group_invitation
 
 

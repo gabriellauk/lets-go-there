@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
 from app.models.user_account import UserAccount
-from app.schemas.travel_idea_group_invitation import TravelIdeaGroupInvitationStatus
+from app.schemas.enums import TravelIdeaGroupInvitationStatus
 
 
 def create_user_account(name_prefix: str = "default", number: int = 1) -> models.UserAccount:

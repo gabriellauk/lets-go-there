@@ -1,28 +1,16 @@
-from enum import Enum
-
 from pydantic import EmailStr
 
+from app.schemas.enums import TravelIdeaGroupInvitationResponseStatus, TravelIdeaGroupInvitationStatus
 from app.schemas.shared import BaseSchema
 from app.schemas.travel_idea_group import TravelIdeaGroupUser
 
 
-class TravelIdeaGroupInvitationCreateOrDelete(BaseSchema):
+class TravelIdeaGroupInvitationCreate(BaseSchema):
     email: EmailStr
 
 
-class TravelIdeaGroupInvitationResponseStatus(Enum):
-    REJECTED = "rejected"
-    ACCEPTED = "accepted"
-
-
-class TravelIdeaGroupInvitationStatus(Enum):
-    PENDING = "pending"
-    REJECTED = "rejected"
-    ACCEPTED = "accepted"
-
-    @classmethod
-    def from_response(cls, response: TravelIdeaGroupInvitationResponseStatus) -> "TravelIdeaGroupInvitationStatus":
-        return cls(response.value)
+class TravelIdeaGroupInvitationDelete(TravelIdeaGroupInvitationCreate):
+    pass
 
 
 class TravelIdeaGroupInvitationRead(BaseSchema):

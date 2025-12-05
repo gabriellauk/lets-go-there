@@ -9,9 +9,7 @@ from sqlalchemy.orm import joinedload
 
 from app.models import TravelIdeaGroup, UserAccount
 from app.models.travel_idea_group_invitation import TravelIdeaGroupInvitation
-from app.schemas.travel_idea_group_invitation import (
-    TravelIdeaGroupInvitationStatus,
-)
+from app.schemas.enums import TravelIdeaGroupInvitationStatus
 from app.services.travel_idea_group_member import create_new_travel_idea_group_member
 
 
