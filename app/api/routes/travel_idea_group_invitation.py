@@ -1,11 +1,8 @@
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException
 
-from app.core.security import get_current_user
-from app.database.init_db import get_db
-from app.models.user_account import UserAccount
+from app.core.dependencies import CurrentUser
+from app.database.dependencies import DBSession
 from app.schemas.travel_idea_group import TravelIdeaGroupUser
 from app.schemas.travel_idea_group_invitation import (
     TravelIdeaGroupInvitationRead,
@@ -23,9 +20,7 @@ router = APIRouter(prefix="/invitation", tags=["invitation"])
 
 
 @router.get("/", response_model=list[TravelIdeaGroupInvitationRead])
-async def get_invitations(
-    db: Annotated[AsyncSession, Depends(get_db)], current_user: Annotated[UserAccount, Depends(get_current_user)]
-) -> list[TravelIdeaGroupInvitationRead]:
+async def get_invitations(db: DBSession, current_user: CurrentUser) -> list[TravelIdeaGroupInvitationRead]:
     travel_idea_group_invitations = await get_travel_idea_group_invitations(db, current_user.email)
 
     return [
@@ -42,8 +37,8 @@ async def get_invitations(
 async def update_invitation(
     invitation_code: str,
     request_body: TravelIdeaGroupInvitationUpdate,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[UserAccount, Depends(get_current_user)],
+    db: DBSession,
+    current_user: CurrentUser,
 ) -> TravelIdeaGroupInvitationResponseRead:
     invitation = await get_travel_idea_group_invitation_for_invitation_code(db, current_user.email, invitation_code)
     if not invitation:

@@ -3,11 +3,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.security import authenticate_user, create_access_token, get_password_hash
-from app.database.init_db import get_db
+from app.database.dependencies import DBSession
 from app.schemas.user import Token, UserCreate, UserRead
 from app.services.user_account import create_user_account, get_user_by_email
 
@@ -15,9 +14,7 @@ router = APIRouter(prefix="/user", tags=["user"])
 
 
 @router.post("/token")
-async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Annotated[AsyncSession, Depends(get_db)]
-) -> Token:
+async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: DBSession) -> Token:
     user = await authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -31,7 +28,7 @@ async def login_for_access_token(
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserRead)
-async def create_user(user_create: UserCreate, db: Annotated[AsyncSession, Depends(get_db)]) -> UserRead:
+async def create_user(user_create: UserCreate, db: DBSession) -> UserRead:
     user = await get_user_by_email(db, user_create.email)
 
     if user:

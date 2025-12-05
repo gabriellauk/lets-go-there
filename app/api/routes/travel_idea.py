@@ -1,11 +1,8 @@
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException
 
-from app.core.security import get_current_user
-from app.database.init_db import get_db
-from app.models.user_account import UserAccount
+from app.core.dependencies import CurrentUser
+from app.database.dependencies import DBSession
 from app.schemas.travel_idea import TravelIdeaCreate, TravelIdeaRead
 from app.services.travel_idea import create_new_travel_idea, get_travel_idea_by_id
 
@@ -15,8 +12,8 @@ router = APIRouter(prefix="/travel-idea", tags=["travel-idea"])
 @router.post("/", response_model=TravelIdeaRead)
 async def create_travel_idea(
     request_data: TravelIdeaCreate,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[UserAccount, Depends(get_current_user)],
+    db: DBSession,
+    current_user: CurrentUser,
 ) -> TravelIdeaRead:
     return await create_new_travel_idea(db, request_data, current_user)
 
@@ -24,8 +21,8 @@ async def create_travel_idea(
 @router.get("/{travel_idea_id}", response_model=TravelIdeaRead)
 async def get_travel_idea(
     travel_idea_id: int,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[UserAccount, Depends(get_current_user)],
+    db: DBSession,
+    current_user: CurrentUser,
 ) -> TravelIdeaRead:
     travel_idea = await get_travel_idea_by_id(db, travel_idea_id)
     if travel_idea is None:

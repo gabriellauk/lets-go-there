@@ -1,12 +1,9 @@
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, status
 
-from app.core.security import get_current_user
+from app.core.dependencies import CurrentUser
 from app.core.validation import validate_existence_and_ownership_of_travel_idea_group
-from app.database.init_db import get_db
-from app.models.user_account import UserAccount
+from app.database.dependencies import DBSession
 from app.schemas.travel_idea_group import (
     TravelIdeaGroupCreate,
     TravelIdeaGroupRead,
@@ -34,8 +31,8 @@ router = APIRouter(prefix="/travel-idea-group", tags=["travel-idea-group"])
 @router.post("/", response_model=TravelIdeaGroupRead, status_code=status.HTTP_201_CREATED)
 async def create_travel_idea_group(
     request_body: TravelIdeaGroupCreate,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[UserAccount, Depends(get_current_user)],
+    db: DBSession,
+    current_user: CurrentUser,
 ) -> TravelIdeaGroupRead:
     travel_idea_group = await create_new_travel_idea_group(db, request_body, current_user)
 
@@ -46,8 +43,8 @@ async def create_travel_idea_group(
 async def create_travel_idea_group_invitation(
     travel_idea_group_id: int,
     body: TravelIdeaGroupInvitationCreateOrDelete,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[UserAccount, Depends(get_current_user)],
+    db: DBSession,
+    current_user: CurrentUser,
 ) -> None:
     travel_idea_group = await validate_existence_and_ownership_of_travel_idea_group(
         db, travel_idea_group_id, current_user
@@ -66,8 +63,8 @@ async def create_travel_idea_group_invitation(
 
 @router.get("/", response_model=list[TravelIdeaGroupRead])
 async def get_travel_idea_groups_for_user(
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[UserAccount, Depends(get_current_user)],
+    db: DBSession,
+    current_user: CurrentUser,
 ) -> list[TravelIdeaGroupRead]:
     travel_idea_groups_from_db = await get_travel_idea_groups(db, current_user.id)
 
@@ -77,8 +74,8 @@ async def get_travel_idea_groups_for_user(
 @router.get("/{travel_idea_group_id}", response_model=TravelIdeaGroupRead)
 async def get_travel_idea_group(
     travel_idea_group_id: int,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[UserAccount, Depends(get_current_user)],
+    db: DBSession,
+    current_user: CurrentUser,
 ) -> TravelIdeaGroupRead:
     travel_idea_group = await get_travel_idea_group_by_id(db, travel_idea_group_id)
     if travel_idea_group is None:
@@ -95,8 +92,8 @@ async def get_travel_idea_group(
 @router.get("/{travel_idea_group_id}/invitation", response_model=list[str])
 async def get_travel_idea_group_invitations(
     travel_idea_group_id: int,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[UserAccount, Depends(get_current_user)],
+    db: DBSession,
+    current_user: CurrentUser,
 ) -> TravelIdeaGroupRead:
     await validate_existence_and_ownership_of_travel_idea_group(db, travel_idea_group_id, current_user)
 
@@ -109,8 +106,8 @@ async def get_travel_idea_group_invitations(
 async def update_travel_idea_group(
     travel_idea_group_id: int,
     request_body: TravelIdeaGroupUpdate,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[UserAccount, Depends(get_current_user)],
+    db: DBSession,
+    current_user: CurrentUser,
 ) -> TravelIdeaGroupRead:
     travel_idea_group = await validate_existence_and_ownership_of_travel_idea_group(
         db, travel_idea_group_id, current_user
@@ -124,8 +121,8 @@ async def update_travel_idea_group(
 @router.delete("/{travel_idea_group_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_travel_idea_group(
     travel_idea_group_id: int,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[UserAccount, Depends(get_current_user)],
+    db: DBSession,
+    current_user: CurrentUser,
 ) -> None:
     travel_idea_group = await validate_existence_and_ownership_of_travel_idea_group(
         db, travel_idea_group_id, current_user
@@ -138,8 +135,8 @@ async def delete_travel_idea_group(
 async def revoke_travel_idea_group_invitation(
     travel_idea_group_id: int,
     body: TravelIdeaGroupInvitationCreateOrDelete,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[UserAccount, Depends(get_current_user)],
+    db: DBSession,
+    current_user: CurrentUser,
 ) -> None:
     await validate_existence_and_ownership_of_travel_idea_group(db, travel_idea_group_id, current_user)
 
