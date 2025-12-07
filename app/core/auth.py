@@ -13,7 +13,7 @@ from app.schemas.user import TokenData
 from app.services.user_account import get_user_by_email
 
 password_hash = PasswordHash.recommended()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/user/token")
 
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: DBSession) -> models.UserAccount:

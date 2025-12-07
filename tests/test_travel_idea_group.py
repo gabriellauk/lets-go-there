@@ -10,42 +10,7 @@ from app.models.travel_idea import TravelIdea
 from app.models.travel_idea_group import TravelIdeaGroup
 from app.models.travel_idea_group_invitation import TravelIdeaGroupInvitation
 from app.schemas.enums import TravelIdeaGroupInvitationStatus, TravelIdeaGroupRole
-from tests.factory import create_travel_idea_group_invitation, create_user_accounts
-
-
-async def _create_travel_idea_group(
-    db_session: AsyncSession,
-    current_user: models.UserAccount,
-    current_user_role: TravelIdeaGroupRole | None = None,
-    name_prefix: str = "default",
-) -> tuple[models.TravelIdeaGroup, list[models.UserAccount], models.UserAccount]:
-    users = await create_user_accounts(db_session, 3, name_prefix)
-
-    if current_user_role == TravelIdeaGroupRole.OWNER:
-        owner = current_user
-        users_to_make_members = [users[0], users[2]]
-    elif current_user_role == TravelIdeaGroupRole.MEMBER:
-        owner = users[1]
-        users_to_make_members = [current_user, users[2]]
-    else:
-        owner = users[1]
-        users_to_make_members = [users[0], users[2]]
-
-    travel_idea_group = models.TravelIdeaGroup(
-        name=f"{name_prefix} Our travel bucket list",
-        owned_by=owner,
-    )
-    db_session.add(travel_idea_group)
-
-    members = [
-        models.TravelIdeaGroupMember(travel_idea_group=travel_idea_group, user_account=user)
-        for user in users_to_make_members
-    ]
-    db_session.add(members[0])
-    db_session.add(members[1])
-
-    await db_session.commit()
-    return travel_idea_group, users_to_make_members, owner
+from tests.factory import create_travel_idea_group, create_travel_idea_group_invitation
 
 
 @pytest.mark.asyncio
@@ -93,7 +58,7 @@ async def test_create_travel_idea_group_invitation_fails_not_found(
 async def test_create_travel_idea_group_invitation_fails_not_owner(
     db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
 ) -> None:
-    travel_idea_group, _, _ = await _create_travel_idea_group(
+    travel_idea_group, _, _ = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.MEMBER
     )
 
@@ -109,7 +74,7 @@ async def test_create_travel_idea_group_invitation_fails_not_owner(
 async def test_create_travel_idea_group_invitation_fails_invalid_email(
     db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
 ) -> None:
-    travel_idea_group, _, _ = await _create_travel_idea_group(
+    travel_idea_group, _, _ = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.OWNER
     )
 
@@ -124,7 +89,7 @@ async def test_create_travel_idea_group_invitation_fails_invalid_email(
 async def test_create_travel_idea_group_invitation_fails_invitee_already_a_member(
     db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
 ) -> None:
-    travel_idea_group, members, _ = await _create_travel_idea_group(
+    travel_idea_group, members, _ = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.OWNER
     )
 
@@ -141,7 +106,7 @@ async def test_create_travel_idea_group_invitation_fails_invitee_already_a_membe
 async def test_create_travel_idea_group_invitation_fails_invitee_is_the_owner(
     db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
 ) -> None:
-    travel_idea_group, _, owner = await _create_travel_idea_group(
+    travel_idea_group, _, owner = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.OWNER
     )
 
@@ -158,7 +123,7 @@ async def test_create_travel_idea_group_invitation_fails_invitee_is_the_owner(
 async def test_create_travel_idea_group_invitation(
     db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
 ) -> None:
-    travel_idea_group, _, _ = await _create_travel_idea_group(
+    travel_idea_group, _, _ = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.OWNER
     )
 
@@ -197,7 +162,7 @@ async def test_get_travel_idea_group_fails_no_access(
     db_session: AsyncSession,
     user: models.UserAccount,
 ) -> None:
-    travel_idea_group, _, _ = await _create_travel_idea_group(db_session, user)
+    travel_idea_group, _, _ = await create_travel_idea_group(db_session, user)
 
     response = await authenticated_client.get(f"/travel-idea-group/{travel_idea_group.id}")
 
@@ -211,7 +176,7 @@ async def test_get_travel_idea_group(
     db_session: AsyncSession,
     user: models.UserAccount,
 ) -> None:
-    travel_idea_group, members, owner = await _create_travel_idea_group(
+    travel_idea_group, members, owner = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.MEMBER
     )
 
@@ -243,7 +208,7 @@ async def test_get_travel_idea_group_invitations_fails_not_owner(
     db_session: AsyncSession,
     user: models.UserAccount,
 ) -> None:
-    travel_idea_group, _, _ = await _create_travel_idea_group(
+    travel_idea_group, _, _ = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.MEMBER
     )
 
@@ -259,10 +224,10 @@ async def test_get_travel_idea_group_invitations(
     db_session: AsyncSession,
     user: models.UserAccount,
 ) -> None:
-    travel_idea_group, members, owner = await _create_travel_idea_group(
+    travel_idea_group, members, owner = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.OWNER
     )
-    other_travel_idea_group, _, _ = await _create_travel_idea_group(
+    other_travel_idea_group, _, _ = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.OWNER, name_prefix="other"
     )
 
@@ -350,11 +315,11 @@ async def test_get_travel_idea_groups(
     db_session: AsyncSession,
     user: models.UserAccount,
 ) -> None:
-    shared_travel_idea_group, shared_group_members, shared_group_owner = await _create_travel_idea_group(
+    shared_travel_idea_group, shared_group_members, shared_group_owner = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.MEMBER, name_prefix="shared"
     )
 
-    owned_travel_idea_group, owned_group_members, owned_group_owner = await _create_travel_idea_group(
+    owned_travel_idea_group, owned_group_members, owned_group_owner = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.OWNER, name_prefix="owned"
     )
 
@@ -362,7 +327,7 @@ async def test_get_travel_idea_groups(
     assert user == owned_group_owner
 
     # As the user has no role on it, we expect the below group not to appear in the response
-    await _create_travel_idea_group(db_session, user, current_user_role=None, name_prefix="other")
+    await create_travel_idea_group(db_session, user, current_user_role=None, name_prefix="other")
 
     response = await authenticated_client.get("/travel-idea-group/")
 
@@ -395,7 +360,7 @@ async def test_get_travel_idea_groups(
 async def test_update_travel_idea_group_fails_mandatory_field_missing(
     db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
 ) -> None:
-    travel_idea_group, _, _ = await _create_travel_idea_group(
+    travel_idea_group, _, _ = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.OWNER
     )
 
@@ -408,7 +373,7 @@ async def test_update_travel_idea_group_fails_mandatory_field_missing(
 async def test_update_travel_idea_group_fails_not_owner(
     db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
 ) -> None:
-    travel_idea_group, _, _ = await _create_travel_idea_group(
+    travel_idea_group, _, _ = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.MEMBER
     )
 
@@ -422,7 +387,7 @@ async def test_update_travel_idea_group_fails_not_owner(
 async def test_update_travel_idea_group(
     db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
 ) -> None:
-    travel_idea_group, members, _ = await _create_travel_idea_group(
+    travel_idea_group, members, _ = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.OWNER
     )
     travel_idea_group_id = travel_idea_group.id
@@ -454,7 +419,7 @@ async def test_delete_travel_idea_group_fails_not_owner(
     db_session: AsyncSession,
     user: models.UserAccount,
 ) -> None:
-    travel_idea_group, _, _ = await _create_travel_idea_group(
+    travel_idea_group, _, _ = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.MEMBER
     )
 
@@ -470,7 +435,7 @@ async def test_delete_travel_idea_group(
     db_session: AsyncSession,
     user: models.UserAccount,
 ) -> None:
-    travel_idea_group, _, _ = await _create_travel_idea_group(
+    travel_idea_group, _, _ = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.OWNER
     )
 
@@ -546,7 +511,7 @@ async def test_revoke_travel_idea_group_invitation_fails_not_owner(
 async def test_revoke_travel_idea_group_invitation_fails_invalid_email(
     db_session: AsyncSession, authenticated_client: AsyncClient, user: models.UserAccount
 ) -> None:
-    travel_idea_group, _, _ = await _create_travel_idea_group(
+    travel_idea_group, _, _ = await create_travel_idea_group(
         db_session, user, current_user_role=TravelIdeaGroupRole.OWNER
     )
 
@@ -600,7 +565,7 @@ async def test_revoke_travel_idea_group_invitation_fails_not_pending(
     invitation, travel_idea_group, _ = await create_travel_idea_group_invitation(
         db_session,
         "email_matches@website.com",
-        TravelIdeaGroupInvitationStatus.ACCEPTED,
+        status,
         name_prefix="email_matches",
         expires_at=datetime.now(UTC) + timedelta(weeks=2),
         creator=user,

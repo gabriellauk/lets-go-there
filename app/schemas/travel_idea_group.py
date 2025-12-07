@@ -17,7 +17,7 @@ class TravelIdeaGroupCreate(TravelIdeaGroupBase):
 
 
 class TravelIdeaGroupUpdate(TravelIdeaGroupBase):
-    name: str | None
+    pass
 
 
 class TravelIdeaGroupRead(TravelIdeaGroupBase):

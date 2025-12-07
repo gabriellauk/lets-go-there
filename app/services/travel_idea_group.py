@@ -19,15 +19,24 @@ async def create_new_travel_idea_group(
     return travel_idea_group
 
 
-def select_travel_idea_group() -> Select:
-    return select(TravelIdeaGroup).options(
+def select_travel_idea_group(load_travel_ideas: bool = False) -> Select:
+    options = [
         selectinload(TravelIdeaGroup.members).joinedload(TravelIdeaGroupMember.user_account),
         joinedload(TravelIdeaGroup.owned_by),
+    ]
+
+    if load_travel_ideas:
+        options.append(selectinload(TravelIdeaGroup.travel_ideas))
+
+    return select(TravelIdeaGroup).options(*options)
+
+
+async def get_travel_idea_group_by_id(
+    db: AsyncSession, travel_idea_group_id: int, load_travel_ideas: bool = False
+) -> TravelIdeaGroup | None:
+    result = await db.execute(
+        select_travel_idea_group(load_travel_ideas).where(TravelIdeaGroup.id == travel_idea_group_id)
     )
-
-
-async def get_travel_idea_group_by_id(db: AsyncSession, travel_idea_group_id: int) -> TravelIdeaGroup | None:
-    result = await db.execute(select_travel_idea_group().where(TravelIdeaGroup.id == travel_idea_group_id))
     travel_idea_group = result.scalars().one_or_none()
     return travel_idea_group
 
