@@ -67,7 +67,7 @@ async def test_create_travel_idea_fails_travel_idea_group_doesnt_exist(authentic
         "/travel-idea-group/404/travel-idea/", json={"name": "Alhambra", "imageUrl": "img_123"}
     )
 
-    assert response.status_code == 404
+    assert response.status_code == 404, response.json()
     assert response.json()["detail"] == "Travel idea group not found"
 
 
@@ -124,7 +124,7 @@ async def test_create_travel_idea(
         f"/travel-idea-group/{travel_idea_group.id}/travel-idea/", json=request_body
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 200, response.json()
     response_json = response.json()
     assert response_json.pop("id") is not None
     assert response_json == request_body

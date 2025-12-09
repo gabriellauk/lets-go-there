@@ -10,8 +10,7 @@ from app.schemas.enums import TravelIdeaGroupInvitationStatus, TravelIdeaGroupRo
 def create_user_account(name_prefix: str = "default", number: int = 1) -> models.UserAccount:
     name = f"user_{name_prefix}_{number}"
     email = name + "@email.com"
-    password_hash = "$argon2id$v=19$m=65536,t=3,p=4$wagCPXjifgvUFBzq4hqe3w$CYaIb8sB+wtD+Vu/P4uod1+Qof8h+1g7bbDlBID48Rc"
-    user_account = models.UserAccount(email=email, password_hash=password_hash, name=name)
+    user_account = models.UserAccount(email=email, name=name)
     return user_account
 
 

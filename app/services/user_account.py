@@ -11,8 +11,8 @@ async def get_user_by_email(db: AsyncSession, email: str) -> UserAccount | None:
     return user
 
 
-async def create_user_account(db: AsyncSession, email: str, password_hash: str, name: str) -> UserAccount:
-    user_account = UserAccount(email=email, password_hash=password_hash, name=name)
+async def create_user_account(db: AsyncSession, email: str, name: str) -> UserAccount:
+    user_account = UserAccount(email=email, name=name)
     db.add(user_account)
     await db.commit()
     await db.refresh(user_account)
