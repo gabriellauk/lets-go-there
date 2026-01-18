@@ -42,6 +42,5 @@ select = [
 "ANN", # flake8-annotations
 ]
 
-[tool.isort]
-profile = "black"
-line_length = 120
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
