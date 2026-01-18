@@ -1,3 +1,4 @@
+![CI status](https://github.com/gabriellauk/lets-go-there/actions/workflows/ci.yml/badge.svg)
 # Let's Go There - A FastAPI app for a shared travel bucket list
 
 This is the backend for a web app that allows users to create joint lists of places they'd like to visit and attractions they'd like to see. A typical use case could be a couple planning a 'bucket list' of future holiday destinations. It could also be used by groups of individuals jotting down ideas for things to do on an upcoming trip.
